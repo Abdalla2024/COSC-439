@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css?family=Audiowide"
+    />
+  </head>
+  <script src="/socket.io/socket.io.js"></script>
+
+  <style>
+    /* CSS Styles for the page */
+    body {
+      background-color: #1a1a2e;
+      color: #ffffff;
+      display: grid;
+      place-items: center;
+      font-family: "Audiowide", sans-serif;
+    }
+
+    #youAre {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+    }
+
+    #enemy {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+    }
+
+    /* Header Styles */
+    h1 {
+      margin: 50px 0;
+      font-size: 10rem;
+      -webkit-text-stroke: 0.5px #ffffff;
+      animation: changeColorH1 3s infinite;
+      /* Animation to change color */
+    }
+
+    /* Keyframe Animation */
+    @keyframes changeColorH1 {
+      0% {
+        color: #ff007f;
+      }
+
+      /* Start color */
+      50% {
+        color: #64dfdf;
+      }
+
+      /* Middle color */
+      100% {
+        color: #ff007f;
+      }
+
+      /* End color */
+    }
+
+    /* Paragraph Styles */
+    p {
+      font-size: 2rem;
+      -webkit-text-stroke: 0.1px #000000;
+      animation: changeColorP 3s infinite;
+      /* Animation to change color */
+    }
+
+    /* Keyframe Animation for Paragraph */
+    @keyframes changeColorP {
+      0% {
+        color: #ff007f;
+      }
+
+      /* Start color */
+      50% {
+        color: #64dfdf;
+      }
+
+      /* Middle color */
+      100% {
+        color: #ff007f;
+      }
+
+      /* End color */
+    }
+
+    /* Reset CSS */
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    /* Input Styles */
+    input {
+      margin-bottom: 20px;
+      padding: 5px;
+      font-size: 1.2rem;
+      background-color: #ffffff;
+      color: #1a1a2e;
+    }
+
+    /* Button Styles */
+    button {
+      font-size: 1.2rem;
+      margin-bottom: 10px;
+      background-color: #ffffff;
+      color: #1a1a2e;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background-color: #64dfdf;
+      color: #ffffff;
+    }
+
+    /* Image Styles */
+    img {
+      width: 140px;
+    }
+
+    /* Innerboard Styles */
+    #innerboard {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+    }
+
+    /* Button Class Styles */
+    .btn {
+      font-size: 3rem;
+      /* Increase font size */
+      width: 150px;
+      /* Increase width */
+      height: 150px;
+      /* Increase height */
+      cursor: pointer;
+      margin: 3px;
+      /* Increase margin for spacing */
+      background-color: #64dfdf;
+      border-radius: 10px;
+      color: #1a1a2e;
+      border: 2px solid black;
+    }
+
+    /* Find Button Styles */
+    #find {
+      font-size: 1.5rem;
+      color: #1a1a2e;
+      cursor: pointer;
+      padding: 7px;
+      border-radius: 10px;
+      width: 250px;
+      background-color: #ffffff;
+      border: none;
+    }
+
+    #find:hover {
+      background-color: #64dfdf;
+      color: #ffffff;
+    }
+
+    /* Enabled Button Styles */
+    button.enabled {
+      opacity: 1;
+    }
+  </style>
+
+  <body>
+    <!-- Header -->
+    <h1>Tic Tac Toe</h1>
+    <!-- Player Information -->
+    <div>
+      <p style="display: flex; width: 95vw; position: relative" id="youAre">
+        You : <span id="user"></span>
+      </p>
+
+      <p style="position: relative; left: 0" id="enemy">
+        Enemy : <span id="oppName"></span>
+      </p>
+    </div>
+
+    <br />
+    <p id="valueCont">You are: <span id="value"></span></p>
+    <br />
+
+    <p id="whosTurn">X's Turn</p>
+
+    <!-- Player Name Input -->
+    <div>
+      <p style="font-size: 1.2rem" id="enterName">Enter your name :</p>
+      <input type="text" placeholder="Name" id="name" autocomplete="off" />
+    </div>
+    <!-- Search Button -->
+    <button id="find">Search for a player</button>
+
+    <!-- Loading Animation -->
+    <img id="loadcircle" src="loadcircle.gif" alt="" />
+
+    <!-- Game Board -->
+    <div id="gameboard">
+      <div id="innerboard">
+        <button id="grid1" class="btn"></button
+        ><button id="grid2" class="btn"></button
+        ><button id="grid3" class="btn"></button
+        ><button id="grid4" class="btn"></button
+        ><button id="grid5" class="btn"></button
+        ><button id="grid6" class="btn"></button
+        ><button id="grid7" class="btn"></button
+        ><button id="grid8" class="btn"></button
+        ><button id="grid9" class="btn"></button>
+      </div>
+    </div>
+  </body>
+
+  <script>
+    // JavaScript code for the page
+
+    // Hide certain elements initially
+    document.getElementById("loadcircle").style.display = "none";
+
+    document.getElementById("gameboard").style.display = "none";
+
+    document.getElementById("youAre").style.display = "none";
+
+    document.getElementById("enemy").style.display = "none";
+
+    document.getElementById("valueCont").style.display = "none";
+
+    document.getElementById("whosTurn").style.display = "none";
+
+    // Socket connection
+    const socket = io();
+    let name;
+
+    // Event listener for the "find" button
+    document.getElementById("find").addEventListener("click", function () {
+      name = document.getElementById("name").value;
+      document.getElementById("user").innerText = name;
+
+      if (name == null || name == "") alert("Please enter a name");
+      else {
+        // Tell server the player name
+        socket.emit("find", { name: name });
+        document.getElementById("loadcircle").style.display = "block";
+        document.getElementById("find").disabled = true;
+      }
+    });
+
+    // Receive both player's info from server
+    socket.on("find", (e) => {
+      let allPlayersArray = e.allPlayers;
+      console.log("html", allPlayersArray);
+
+      if (name != "") {
+        document.getElementById("youAre").style.display = "block";
+
+        document.getElementById("enemy").style.display = "block";
+
+        document.getElementById("valueCont").style.display = "block";
+
+        document.getElementById("loadcircle").style.display = "none";
+
+        document.getElementById("name").style.display = "none";
+
+        document.getElementById("find").style.display = "none";
+
+        document.getElementById("enterName").style.display = "none";
+
+        document.getElementById("gameboard").style.display = "block";
+
+        document.getElementById("whosTurn").style.display = "block";
+
+        document.getElementById("whosTurn").innerText = "X's Turn";
+      }
+
+      let oppName;
+      let value;
+
+      const foundObject = allPlayersArray.find(
+        (obj) => obj.p1.p1name == `${name}` || obj.p2.p2name == `${name}`
+      );
+
+      foundObject.p1.p1name == `${name}`
+        ? (oppName = foundObject.p2.p2name)
+        : (oppName = foundObject.p1.p1name);
+
+      foundObject.p1.p1name == `${name}`
+        ? (value = foundObject.p1.p1value)
+        : (value = foundObject.p2.p2value);
+
+      document.getElementById("oppName").innerText = oppName;
+
+      document.getElementById("value").innerText = value;
+    });
+
+    // Event listener for the game buttons
+    document.querySelectorAll(".btn").forEach((e) => {
+      e.addEventListener("click", function () {
+        if (
+          (document.getElementById("whosTurn").innerText === "X's Turn" &&
+            document.getElementById("value").innerText === "X") ||
+          (document.getElementById("whosTurn").innerText === "O's Turn" &&
+            document.getElementById("value").innerText === "O")
+        ) {
+          let value = document.getElementById("value").innerText;
+          e.innerText = value;
+
+          socket.emit("playing", {
+            value: value,
+            id: e.id,
+            name: name,
+          });
+        }
+      });
+    });
+
+    // Handling when players make a move
+    socket.on("playing", (e) => {
+      const foundObject = e.allPlayers.find(
+        (obj) => obj.p1.p1name == `${name}` || obj.p2.p2name == `${name}`
+      );
+
+      p1id = foundObject.p1.p1move;
+
+      p2id = foundObject.p2.p2move;
+
+      if (foundObject.sum % 2 == 0)
+        document.getElementById("whosTurn").innerText = "O's Turn";
+      else document.getElementById("whosTurn").innerText = "X's Turn";
+
+      if (p1id != "") {
+        document.getElementById(`${p1id}`).innerText = "X";
+
+        document.getElementById(`${p1id}`).disabled = true;
+
+        document.getElementById(`${p1id}`).style.color = "black";
+      }
+
+      if (p2id != "") {
+        document.getElementById(`${p2id}`).innerText = "O";
+
+        document.getElementById(`${p2id}`).disabled = true;
+
+        document.getElementById(`${p2id}`).style.color = "black";
+      }
+
+      check(name, foundObject.sum);
+    });
+
+    // Check if a player has won or if it's a draw
+    function check(name, sum) {
+      document.getElementById("grid1").innerText == ""
+        ? (b1 = "a")
+        : (b1 = document.getElementById("grid1").innerText);
+      document.getElementById("grid2").innerText == ""
+        ? (b2 = "b")
+        : (b2 = document.getElementById("grid2").innerText);
+      document.getElementById("grid3").innerText == ""
+        ? (b3 = "c")
+        : (b3 = document.getElementById("grid3").innerText);
+      document.getElementById("grid4").innerText == ""
+        ? (b4 = "d")
+        : (b4 = document.getElementById("grid4").innerText);
+      document.getElementById("grid5").innerText == ""
+        ? (b5 = "e")
+        : (b5 = document.getElementById("grid5").innerText);
+      document.getElementById("grid6").innerText == ""
+        ? (b6 = "f")
+        : (b6 = document.getElementById("grid6").innerText);
+      document.getElementById("grid7").innerText == ""
+        ? (b7 = "g")
+        : (b7 = document.getElementById("grid7").innerText);
+      document.getElementById("grid8").innerText == ""
+        ? (b8 = "h")
+        : (b8 = document.getElementById("grid8").innerText);
+      document.getElementById("grid9").innerText == ""
+        ? (b9 = "i")
+        : (b9 = document.getElementById("grid9").innerText);
+
+      if (
+        (b1 == b2 && b2 == b3) ||
+        (b4 == b5 && b5 == b6) ||
+        (b7 == b8 && b8 == b9) ||
+        (b1 == b4 && b4 == b7) ||
+        (b2 == b5 && b5 == b8) ||
+        (b3 == b6 && b6 == b9) ||
+        (b1 == b5 && b5 == b9) ||
+        (b3 == b5 && b5 == b7)
+      ) {
+        socket.emit("gameOver", { name: name });
+
+        setTimeout(() => {
+          sum % 2 == 0 ? alert("x won") : alert("O won");
+
+          setTimeout(() => {
+            location.reload();
+          }, 2000);
+        }, 100);
+      } else if (sum == 10) {
+        socket.emit("gameOver", { name: name });
+
+        setTimeout(() => {
+          alert("The game is a draw!");
+
+          setTimeout(() => {
+            location.reload();
+          }, 2000);
+        }, 100);
+      }
+    }
+  </script>
+</html>
